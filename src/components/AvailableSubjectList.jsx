@@ -1,6 +1,11 @@
 import AvailableSubjectRow from "./available-subject/AvailableSubjectRow";
 
-function AvailableSubjectList({ subjects }) {
+function AvailableSubjectList({
+  subjects,
+  sinhVienKhoaId,
+  kyHocId,
+  setDangKyTamList,
+}) {
   if (!subjects || subjects.length === 0) return null;
 
   return (
@@ -17,7 +22,13 @@ function AvailableSubjectList({ subjects }) {
         </thead>
         <tbody>
           {subjects.map((s) => (
-            <AvailableSubjectRow key={s.id} subject={s} />
+            <AvailableSubjectRow
+              key={s.id}
+              subject={s}
+              sinhVienKhoaId={sinhVienKhoaId}
+              kyHocId={kyHocId}
+              setDangKyTamList={setDangKyTamList}
+            />
           ))}
         </tbody>
       </table>

@@ -1,7 +1,12 @@
 import { useState } from "react";
 import SubjectDetail from "./SubjectDetail";
 
-function AvailableSubjectRow({ subject }) {
+function AvailableSubjectRow({
+  subject,
+  sinhVienKhoaId,
+  kyHocId,
+  setDangKyTamList,
+}) {
   const [expanded, setExpanded] = useState(false);
   const [details, setDetails] = useState(null);
 
@@ -37,7 +42,12 @@ function AvailableSubjectRow({ subject }) {
       {expanded && (
         <tr>
           <td colSpan={4}>
-            <SubjectDetail details={details} />
+            <SubjectDetail
+              details={details}
+              sinhVienKhoaId={sinhVienKhoaId}
+              kyHocId={kyHocId}
+              setDangKyTamList={setDangKyTamList}
+            />
           </td>
         </tr>
       )}

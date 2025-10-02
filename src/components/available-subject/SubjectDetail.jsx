@@ -23,13 +23,52 @@ function TimetableText({ thoiGianLichHoc }) {
 }
 
 // Component chính hiển thị danh sách lớp học phần
-export default function SubjectDetail({ details }) {
+export default function SubjectDetail({
+  details,
+  sinhVienKhoaId,
+  setDangKyTamList,
+}) {
   if (!details) return <div>Đang tải...</div>;
 
   // Hàm xử lý khi chọn lớp học phần
-  const handleSelect = (id) => {
-    console.log("Lớp học phần được chọn:", id);
-    // TODO: Gửi dữ liệu về server hoặc lưu vào state cha
+  const handleSelect = async (lopHocPhanId) => {
+    if (!sinhVienKhoaId || !lopHocPhanId) {
+      alert("Thiếu thông tin sinh viên hoặc lớp học phần.");
+      return;
+    }
+
+    const payload = {
+      sinhVienKhoaId,
+      lopHocPhanId,
+    };
+
+    try {
+      const res = await fetch(
+        "http://localhost:8080/api/dang-ky-tam/them-moi",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${sessionStorage.getItem("accessToken")}`,
+          },
+          body: JSON.stringify(payload),
+        }
+      );
+      const result = await res.json();
+
+      if (result.status) {
+        alert("✅ " + result.message); // Ví dụ: Đăng ký tạm thành công
+        // TODO: gọi lại API cập nhật danh sách đã đăng ký nếu cần
+        if (result.thongTinDangKy) {
+          setDangKyTamList((prev) => [...prev, result.thongTinDangKy]);
+        }
+      } else {
+        alert("❌ " + result.message); // Ví dụ: Trùng lịch, hết slot...
+      }
+    } catch (err) {
+      console.error("Lỗi gọi API:", err);
+      alert("❌ Lỗi hệ thống: " + err.message);
+    }
   };
 
   return (
