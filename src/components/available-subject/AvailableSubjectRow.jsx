@@ -15,7 +15,7 @@ function AvailableSubjectRow({
       // call API lấy chi tiết theo subject.id
       const token = sessionStorage.getItem("accessToken");
       const res = await fetch(
-        `http://localhost:8080/api/lop-hoc-phan/dang-ky?monHocKyHocId=${subject.monHocKyHocId}`,
+        `http://localhost:8080/schedule/info/lop-hoc?monHocKyHocId=${subject.monHocKyHocId}`,
         {
           method: "GET",
           headers: { Authorization: `Bearer ${token}` },

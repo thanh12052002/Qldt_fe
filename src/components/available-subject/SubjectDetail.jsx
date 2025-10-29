@@ -32,28 +32,25 @@ export default function SubjectDetail({
 
   // Hàm xử lý khi chọn lớp học phần
   const handleSelect = async (lopHocPhanId) => {
-    if (!sinhVienKhoaId || !lopHocPhanId) {
+    if (!lopHocPhanId) {
       alert("Thiếu thông tin sinh viên hoặc lớp học phần.");
       return;
     }
-
+    sinhVienKhoaId = 1;
     const payload = {
       sinhVienKhoaId,
       lopHocPhanId,
     };
 
     try {
-      const res = await fetch(
-        "http://localhost:8080/api/dang-ky-tam/them-moi",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${sessionStorage.getItem("accessToken")}`,
-          },
-          body: JSON.stringify(payload),
-        }
-      );
+      const res = await fetch("http://localhost:8080/draft/add-registration", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${sessionStorage.getItem("accessToken")}`,
+        },
+        body: JSON.stringify(payload),
+      });
       const result = await res.json();
 
       if (result.status) {

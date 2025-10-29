@@ -4,7 +4,9 @@ import SemesterSelector from "./SemesterSelector";
 import AvailableSubjectList from "./AvailableSubjectList";
 import RegisteredSubjectList from "./RegisteredSubjectList";
 import DangKyTamTable from "./dang_ky_tam/DangKyTamTable";
-
+import { useWebSocket } from "./websocket/UseWebSocket";
+import { fetchMonHoc } from "../service/academicService";
+import { fetchDangKyTamList } from "../service/draftService";
 function RegisterForm() {
   const [majors, setMajors] = useState([]);
   const [semesters, setSemesters] = useState([]);
@@ -14,18 +16,19 @@ function RegisterForm() {
   const [availableSubjects, setAvailableSubjects] = useState([]);
   const [registeredSubjects, setRegisteredSubjects] = useState([]);
 
-  const [sinhVienKhoaId, setSinhVienKhoaId] = useState(null);
+  const [sinhVienKhoaId, setSinhVienKhoaId] = useState(0);
   const [kyHocId, setKyHocId] = useState(null);
 
   const [dangKyTamList, setDangKyTamList] = useState([]);
 
   const token = sessionStorage.getItem("accessToken");
-
+  //socket.io
+  const [notifications, setNotifications] = useState([]);
   // Lấy danh sách Khoa & Kỳ học
   useEffect(() => {
     if (!token) return;
 
-    fetch("http://localhost:8080/api/sinh-vien/information/khoa-kyhoc", {
+    fetch("http://localhost:8080/student/information/khoa-kyhoc", {
       headers: {
         Authorization: `Bearer ${token}`,
         "Content-Type": "application/json",
@@ -33,8 +36,8 @@ function RegisterForm() {
     })
       .then((res) => res.json())
       .then((data) => {
-        setMajors(data.khoaResponses || []);
-        setSemesters(data.kyHocResponses || []);
+        setMajors(data.khoaResponseList || []);
+        setSemesters(data.kyHocResponseList || []);
       })
       .catch((err) => {
         console.error("Lỗi khi lấy thông tin:", err);
@@ -62,7 +65,7 @@ function RegisterForm() {
 
     // 1. Gọi API lấy môn học
     fetch(
-      `http://localhost:8080/api/sinh-vien/information/mon-hoc/dang-ky?khoaId=${selectedMajor}&kyHocId=${selectedSemester}`,
+      `http://localhost:8080/academic/info/mon-dang-ky?khoaId=${selectedMajor}&kyHocId=${selectedSemester}`,
       {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -82,9 +85,9 @@ function RegisterForm() {
         alert(err.message);
       });
 
-    // 2. Gọi API lấy sinhVienKhoaId
+    //2. Gọi API lấy sinhVienKhoaId
     fetch(
-      `http://localhost:8080/api/sinh-vien/information/sinh-vien-khoa?khoaId=${selectedMajor}`,
+      `http://localhost:8080/student/information/id/sinh-vien-khoa?khoaId=${selectedMajor}`,
       {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -94,7 +97,7 @@ function RegisterForm() {
     )
       .then((res) => res.json())
       .then((data) => {
-        const svkId = data.id;
+        const svkId = data;
         setSinhVienKhoaId(svkId);
         setKyHocId(selectedSemester);
 
@@ -114,7 +117,7 @@ function RegisterForm() {
     const fetchDangKyTamList = async () => {
       try {
         const res = await fetch(
-          `http://localhost:8080/api/dang-ky-tam/danh-sach?sinhVienKhoaId=${sinhVienKhoaId}`,
+          `http://localhost:8080/draft/mon-hoc-draft?sinhVienKhoaId=${sinhVienKhoaId}`,
           {
             headers: {
               Authorization: `Bearer ${token}`,
@@ -138,10 +141,9 @@ function RegisterForm() {
       alert("Thiếu thông tin sinh viên.");
       return;
     }
-
     try {
       const res = await fetch(
-        "http://localhost:8080/api/dang-ky-mon/xac-nhan",
+        "http://localhost:8080/registration/info/confirm-registration",
         {
           method: "POST",
           headers: {
@@ -166,6 +168,11 @@ function RegisterForm() {
       alert("❌ Lỗi hệ thống: " + err.message);
     }
   };
+  useWebSocket(1, (msg) => {
+    console.log("📩 Notification:", msg);
+    setNotifications((prev) => [...prev, msg]);
+    alert(`📢 Cập nhật: ${msg.status}`);
+  });
 
   return (
     <div>
@@ -196,9 +203,16 @@ function RegisterForm() {
         onRemove={handleXoaLopHocPhan}
       />
       {dangKyTamList.length > 0 && (
-        <button onClick={handleXacNhanDangKy} style={{ marginTop: "20px" }}>
-          ✅ Xác nhận đăng ký chính thức
-        </button>
+        <div>
+          <button onClick={handleXacNhanDangKy} style={{ marginTop: "20px" }}>
+            ✅ Xác nhận đăng ký chính thức
+          </button>
+          <div>
+            {notifications.map((n, i) => (
+              <p key={i}>📢 {n.status}</p>
+            ))}
+          </div>
+        </div>
       )}
 
       <RegisteredSubjectList

@@ -16,21 +16,17 @@ export default function DangKyTamTable({ dangKyTamList, onRemove }) {
         <thead>
           <tr>
             <th>Tên môn học</th>
-            <th>Lớp học phần</th>
             <th>Số tín chỉ</th>
             <th>Hành động</th>
           </tr>
         </thead>
         <tbody>
           {dangKyTamList.map((item) => (
-            <tr key={item.lopHocPhanId}>
+            <tr key={item.id}>
               <td>{item.tenMonHoc}</td>
-              <td>{item.tenLopHocPhan}</td>
               <td>{item.soTinChi}</td>
               <td>
-                <button onClick={() => onRemove(item.lopHocPhanId)}>
-                  ❌ Xoá
-                </button>
+                <button onClick={() => onRemove(item.id)}>❌ Xoá</button>
               </td>
             </tr>
           ))}

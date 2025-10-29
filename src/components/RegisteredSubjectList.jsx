@@ -10,6 +10,7 @@ function RegisteredSubjectList({ subjects }) {
             <th>ID</th>
             <th>Tên môn học</th>
             <th>Số tín chỉ</th>
+            <th>Trạng thái đăng ký</th>
             <th>Thời gian đăng ký</th>
           </tr>
         </thead>
@@ -19,6 +20,7 @@ function RegisteredSubjectList({ subjects }) {
               <td>{s.monHocId}</td>
               <td>{s.tenMonHoc}</td>
               <td>{s.soTinChi}</td>
+              <td>{s.status}</td>
               <td>
                 {s.thoiGianDangKy
                   ? new Date(s.thoiGianDangKy).toLocaleString()

@@ -9,7 +9,7 @@ function SemesterSelector({ semesters, selectedSemester, onChange }) {
         <option value="">Chọn kỳ học</option>
         {semesters.map((s) => (
           <option key={s.id} value={s.id}>
-            {s.ten}
+            {s.moTa}
           </option>
         ))}
       </select>
