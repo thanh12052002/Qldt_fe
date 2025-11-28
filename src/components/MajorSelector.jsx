@@ -1,4 +1,5 @@
 function MajorSelector({ majors, selectedMajor, onChange }) {
+  console.log("selected major is:" + selectedMajor);
   return (
     <div>
       <label>Ngành:</label>

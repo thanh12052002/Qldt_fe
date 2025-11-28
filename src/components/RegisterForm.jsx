@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import MajorSelector from "./MajorSelector";
 import SemesterSelector from "./SemesterSelector";
 import AvailableSubjectList from "./AvailableSubjectList";
@@ -7,7 +7,9 @@ import DangKyTamTable from "./dang_ky_tam/DangKyTamTable";
 import { useWebSocket } from "./websocket/UseWebSocket";
 import { fetchMonHoc } from "../service/academicService";
 import { fetchDangKyTamList } from "../service/draftService";
+import { useNavigate } from "react-router-dom";
 function RegisterForm() {
+  const navigate = useNavigate();
   const [majors, setMajors] = useState([]);
   const [semesters, setSemesters] = useState([]);
   const [selectedMajor, setSelectedMajor] = useState("");
@@ -25,7 +27,46 @@ function RegisterForm() {
   //socket.io
   const [notifications, setNotifications] = useState([]);
   // Lấy danh sách Khoa & Kỳ học
+
+  // --- HÀM GỌI API MÔN HỌC ---
+  const loadMonHoc = useCallback(async () => {
+    console.log(
+      `call load mon hoc with major: ${JSON.stringify(
+        majors
+      )} - ${JSON.stringify(semesters)}`
+    );
+    console.log(
+      `call load mon hoc with ${JSON.stringify(
+        selectedMajor
+      )} - ${JSON.stringify(selectedSemester)}`
+    );
+    if (!token || !selectedMajor || !selectedSemester) return;
+    try {
+      const { daDangKy, chuaDangKy } = await fetchMonHoc(
+        token,
+        selectedMajor,
+        selectedSemester
+      );
+      setRegisteredSubjects(daDangKy);
+      setAvailableSubjects(chuaDangKy);
+    } catch (err) {
+      console.error("❌ Lỗi loadMonHoc:", err);
+    }
+  }, [token, selectedMajor, selectedSemester]);
+
+  // --- HÀM GỌI API DANH SÁCH ĐĂNG KÝ TẠM ---
+  const loadDangKyTam = useCallback(async () => {
+    if (!token || !sinhVienKhoaId) return;
+    try {
+      const data = await fetchDangKyTamList(token, sinhVienKhoaId);
+      setDangKyTamList(data);
+    } catch (err) {
+      console.error("❌ Lỗi loadDangKyTam:", err);
+    }
+  }, [token, sinhVienKhoaId]);
+
   useEffect(() => {
+    console.log("run useEffect khoa-kyHoc");
     if (!token) return;
 
     fetch("http://localhost:8080/student/information/khoa-kyhoc", {
@@ -64,27 +105,9 @@ function RegisterForm() {
     if (!token || !selectedMajor || !selectedSemester) return;
 
     // 1. Gọi API lấy môn học
-    fetch(
-      `http://localhost:8080/academic/info/mon-dang-ky?khoaId=${selectedMajor}&kyHocId=${selectedSemester}`,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-      }
-    )
-      .then((res) => res.json())
-      .then((data) => {
-        const daDangKy = data.filter((item) => item.daDangKy === 1);
-        const chuaDangKy = data.filter((item) => item.daDangKy === 0);
-        setRegisteredSubjects(daDangKy);
-        setAvailableSubjects(chuaDangKy);
-      })
-      .catch((err) => {
-        console.error("Lỗi khi gọi API môn học:", err);
-        alert(err.message);
-      });
+    loadMonHoc();
 
+    console.log("call api get mon-hoc and svk");
     //2. Gọi API lấy sinhVienKhoaId
     fetch(
       `http://localhost:8080/student/information/id/sinh-vien-khoa?khoaId=${selectedMajor}`,
@@ -112,26 +135,8 @@ function RegisterForm() {
 
   //get all dang ky tam
   useEffect(() => {
+    console.log("call-thong tin dang ky");
     if (!sinhVienKhoaId) return;
-
-    const fetchDangKyTamList = async () => {
-      try {
-        const res = await fetch(
-          `http://localhost:8080/draft/mon-hoc-draft?sinhVienKhoaId=${sinhVienKhoaId}`,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-              "Content-Type": "application/json",
-            },
-          }
-        );
-        const data = await res.json();
-        setDangKyTamList(data); // danh sách DangKyTamDto[]
-      } catch (err) {
-        console.error("Lỗi khi gọi API danh sách đăng ký tạm:", err);
-        alert("❌ Không thể tải danh sách đăng ký tạm");
-      }
-    };
 
     fetchDangKyTamList();
   }, [sinhVienKhoaId, token]);
@@ -160,6 +165,7 @@ function RegisterForm() {
         alert("✅ " + result.message);
         setDangKyTamList([]); // reset sau khi xác nhận thành công
         // TODO: Có thể gọi lại API load lại danh sách đã đăng ký chính thức
+        loadMonHoc();
       } else {
         alert("❌ " + result.message);
       }
@@ -169,6 +175,8 @@ function RegisterForm() {
     }
   };
   useWebSocket(1, (msg) => {
+    loadDangKyTam();
+    loadMonHoc();
     console.log("📩 Notification:", msg);
     setNotifications((prev) => [...prev, msg]);
     alert(`📢 Cập nhật: ${msg.status}`);
@@ -219,6 +227,16 @@ function RegisterForm() {
         subjects={registeredSubjects}
         disabled={!sinhVienKhoaId || !kyHocId}
       />
+      <button
+        onClick={() =>
+          navigate(
+            `/invoice?sinhVienKhoaId=${sinhVienKhoaId}&kyHocId=${kyHocId}`
+          )
+        }
+        style={{ marginLeft: "10px" }}
+      >
+        🧾 Xem hóa đơn
+      </button>
     </div>
   );
 }

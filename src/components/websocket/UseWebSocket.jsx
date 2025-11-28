@@ -19,9 +19,7 @@ export const useWebSocket = (studentId, onMessageReceived) => {
         client.subscribe(
           `/topic/registration-status/${studentId}`,
           (message) => {
-            const body = JSON.parse(message.body);
-            console.log("📩 Received:", body);
-            onMessageReceived(body);
+            onMessageReceived();
           }
         );
 

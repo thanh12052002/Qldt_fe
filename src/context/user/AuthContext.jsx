@@ -11,6 +11,7 @@ export const AuthProvider = ({ children }) => {
 
   // Khi app load lại, lấy thông tin từ sessionStorage
   useEffect(() => {
+    console.log(`Call use Effect with ${user} - ${accessToken}`);
     const storedUser = sessionStorage.getItem("user");
     const storedToken = sessionStorage.getItem("accessToken");
 
