@@ -7,8 +7,13 @@ import DangKyTamTable from "./dang_ky_tam/DangKyTamTable";
 import { useWebSocket } from "./websocket/UseWebSocket";
 import { fetchMonHoc } from "../service/academicService";
 import { fetchDangKyTamList } from "../service/draftService";
+import {
+  fetchMajorAndSemester,
+  fetchSinhVienKhoaAndKyHoc,
+} from "../service/studentService";
 import { useNavigate } from "react-router-dom";
 function RegisterForm() {
+  //state-start
   const navigate = useNavigate();
   const [majors, setMajors] = useState([]);
   const [semesters, setSemesters] = useState([]);
@@ -26,8 +31,9 @@ function RegisterForm() {
   const token = sessionStorage.getItem("accessToken");
   //socket.io
   const [notifications, setNotifications] = useState([]);
-  // Lấy danh sách Khoa & Kỳ học
+  //state-end
 
+  //function-start
   // --- HÀM GỌI API MÔN HỌC ---
   const loadMonHoc = useCallback(async () => {
     console.log(
@@ -65,82 +71,38 @@ function RegisterForm() {
     }
   }, [token, sinhVienKhoaId]);
 
-  useEffect(() => {
-    console.log("run useEffect khoa-kyHoc");
-    if (!token) return;
+  // -- HÀM GỌI API ID SinhVienKhoa ---
+  const loadSinhVienKhoaId = useCallback(async () => {
+    if (!token || !selectedMajor || !selectedSemester) return;
+    try {
+      const { svkId } = await fetchSinhVienKhoaAndKyHoc(token, selectedMajor);
+      setSinhVienKhoaId(svkId);
+      setKyHocId(selectedSemester);
+      sessionStorage.setItem("sinhVienKhoaId", svkId);
+      sessionStorage.setItem("kyHocId", selectedSemester);
+    } catch (err) {
+      console.error("❌ Lỗi loadSinhVienKhoaId:", err);
+    }
+  }, [token, selectedMajor, selectedSemester]);
+  //
 
-    fetch("http://localhost:8080/student/information/khoa-kyhoc", {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-      },
-    })
-      .then((res) => res.json())
-      .then((data) => {
-        setMajors(data.khoaResponseList || []);
-        setSemesters(data.kyHocResponseList || []);
-      })
-      .catch((err) => {
-        console.error("Lỗi khi lấy thông tin:", err);
-        alert(err.message);
-      });
+  // -- HÀM GỌI API lay khoa+kyHoc
+  const loadKhoaAndKyHoc = useCallback(async () => {
+    if (!token) return;
+    try {
+      const { khoaResponseList, kyHocResponseList } =
+        await fetchMajorAndSemester(token);
+      console.log(
+        `data response khoaAndKyHoc: ${khoaResponseList}-${kyHocResponseList}`
+      );
+      setMajors(khoaResponseList);
+      setSemesters(kyHocResponseList);
+    } catch (err) {
+      console.error("❌ Lỗi loadKhoaAndKyHoc:", err);
+    }
   }, [token]);
 
-  // Reset khi chọn lại Khoa hoặc Kỳ học
-  useEffect(() => {
-    setSinhVienKhoaId(null);
-    setKyHocId(null);
-    sessionStorage.removeItem("sinhVienKhoaId");
-    sessionStorage.removeItem("kyHocId");
-  }, [selectedMajor, selectedSemester]);
-
-  const handleXoaLopHocPhan = (lopHocPhanId) => {
-    setDangKyTamList((prev) =>
-      prev.filter((item) => item.lopHocPhanId !== lopHocPhanId)
-    );
-  };
-
-  // Gọi API lấy môn học + lấy sinhVienKhoaId sau khi chọn
-  useEffect(() => {
-    if (!token || !selectedMajor || !selectedSemester) return;
-
-    // 1. Gọi API lấy môn học
-    loadMonHoc();
-
-    console.log("call api get mon-hoc and svk");
-    //2. Gọi API lấy sinhVienKhoaId
-    fetch(
-      `http://localhost:8080/student/information/id/sinh-vien-khoa?khoaId=${selectedMajor}`,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-      }
-    )
-      .then((res) => res.json())
-      .then((data) => {
-        const svkId = data;
-        setSinhVienKhoaId(svkId);
-        setKyHocId(selectedSemester);
-
-        sessionStorage.setItem("sinhVienKhoaId", svkId);
-        sessionStorage.setItem("kyHocId", selectedSemester);
-      })
-      .catch((err) => {
-        console.error("Lỗi khi lấy sinhVienKhoaId:", err);
-        alert(err.message);
-      });
-  }, [token, selectedMajor, selectedSemester]);
-
-  //get all dang ky tam
-  useEffect(() => {
-    console.log("call-thong tin dang ky");
-    if (!sinhVienKhoaId) return;
-
-    fetchDangKyTamList();
-  }, [sinhVienKhoaId, token]);
-
+  // -- HÀM GỌI API XÁC NHẬN ĐĂNG KÝ --
   const handleXacNhanDangKy = async () => {
     if (!sinhVienKhoaId) {
       alert("Thiếu thông tin sinh viên.");
@@ -174,6 +136,51 @@ function RegisterForm() {
       alert("❌ Lỗi hệ thống: " + err.message);
     }
   };
+
+  // -- HÀM XÓA Lớp học phần khỏi List Đăng Ký Tạm
+  const handleXoaLopHocPhan = (lopHocPhanId) => {
+    setDangKyTamList((prev) =>
+      prev.filter((item) => item.lopHocPhanId !== lopHocPhanId)
+    );
+  };
+  //function-end
+
+  // UseEffect
+  // -- UseEffect LoadKhoaAndKyHOC --
+  useEffect(() => {
+    console.log("run useEffect khoa-kyHoc");
+    loadKhoaAndKyHoc();
+  }, [token]);
+
+  // -- UseEffect Clear Khoa And KyHoc khi chuyển lựa chọn --
+  useEffect(() => {
+    setSinhVienKhoaId(null);
+    setKyHocId(null);
+    sessionStorage.removeItem("sinhVienKhoaId");
+    sessionStorage.removeItem("kyHocId");
+  }, [selectedMajor, selectedSemester]);
+
+  // -- UseEffect get MonHoc + SinhVienKhoaId --
+  useEffect(() => {
+    console.log("call api get mon-hoc and svk");
+    if (!token || !selectedMajor || !selectedSemester) return;
+    console.log("call api get mon-hoc");
+    // 1. Gọi API lấy môn học
+    loadMonHoc();
+    // 2. API get svkId
+    console.log("call api get svk");
+    loadSinhVienKhoaId();
+  }, [token, selectedMajor, selectedSemester]);
+
+  //-- UseEffect get Đăng Ký Tạm --
+  useEffect(() => {
+    console.log("call-thong tin dang ky");
+    if (!sinhVienKhoaId || !token) return;
+
+    loadDangKyTam();
+  }, [sinhVienKhoaId, token]);
+
+  // --UseWebSocket cập nhật trạng thái đăng ký --
   useWebSocket(1, (msg) => {
     loadDangKyTam();
     loadMonHoc();
@@ -181,6 +188,8 @@ function RegisterForm() {
     setNotifications((prev) => [...prev, msg]);
     alert(`📢 Cập nhật: ${msg.status}`);
   });
+
+  //UseEffect-END
 
   return (
     <div>
